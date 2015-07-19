@@ -22,11 +22,11 @@ local function addmenu(n, m, menu)
 	menu = menu or {}
 	menu.label = n
 	menu.mks = {}
-	
+
 	for i, _ in ipairs(menu) do
 		menu[i] = nil
 	end
-	
+
 	for _, data in ipairs(m) do
 		if (data == "-") then
 			menu[#menu+1] = "-"
@@ -39,29 +39,29 @@ local function addmenu(n, m, menu)
 				fn = data[5]
 			}
 			menu[#menu+1] = item
-			
+
 			if item.mk then
 				if menu.mks[item.mk] then
 					error("Duplicate menu action key "..item.mk)
 				end
 				menu.mks[item.mk] = item
 			end
-			
+
 			if menu_tab[item.id] then
 				error("Dupicate menu ID "..item.id)
 			end
 			menu_tab[item.id] = item
-			
+
 			if item.ak then
 				key_tab[item.ak] = item.id
 			end
-			
+
 			if (item.label:len() > w) then
 				w = item.label:len()
 			end
 		end
 	end
-	
+
 	menu.maxwidth = w
 	return menu
 end
@@ -165,7 +165,7 @@ local MarginMenu = addmenu("Margin",
 	{"SM3",    "N", "Show paragraph numbers",     nil,         function() Cmd.SetViewMode(3) end},
 	{"SM4",    "W", "Show paragraph word counts", nil,         function() Cmd.SetViewMode(4) end},
 })
-	
+
 local StyleMenu = addmenu("Style",
 {
 	{"SI",     "I", "Set italic",                 "^I",        { cp, function() Cmd.SetStyle("i") end }},
@@ -175,7 +175,7 @@ local StyleMenu = addmenu("Style",
 	"-",
 	{"SP",     "P", "Change paragraph style ▷",   "^P",        ParagraphStylesMenu},
 	{"SM",     "M", "Set margin mode ▷",          nil,         MarginMenu},
-	{"SS",     "S", "Toggle status bar",          nil,         Cmd.ToggleStatusBar},
+	{"SS",     "S", "Toggle status bar",          "^T",         Cmd.ToggleStatusBar},
 })
 
 local NavigationMenu = addmenu("Navigation",
@@ -253,7 +253,7 @@ MenuClass = {
 		QueueRedraw()
 		SetNormal()
 	end,
-	
+
 	drawmenu = function(self, x, y, menu, n, top)
 		local akw = 0
 		for _, item in ipairs(menu) do
@@ -268,7 +268,7 @@ MenuClass = {
 		if (akw > 0) then
 			akw = akw + 1
 		end
-		
+
 		local w = menu.maxwidth + 4 + akw
 		local visiblelen = min(#menu, ScreenHeight-y-3)
 		DrawTitledBox(x, y, w, visiblelen, menu.label)
@@ -283,12 +283,12 @@ MenuClass = {
 				Write(x+w+1, yy, "║")
 			end
 		end
-		
+
 		for i = top, top+visiblelen-1 do
 			local item = menu[i]
 			local ak = self.accelerators[item.id]
 			local yy = y+i-top+1
-			
+
 			if (item == "-") then
 				if (i == n) then
 					SetReverse()
@@ -301,7 +301,7 @@ MenuClass = {
 					SetReverse()
 					Write(x+1, yy, string.rep(" ", w))
 				end
-				
+
 				Write(x+4, yy, item.label)
 
 				SetBold()
@@ -310,39 +310,39 @@ MenuClass = {
 					local l = GetStringWidth(ak)
 					Write(x+w-l, yy, ak)
 				end
-		
+
 				if item.mk then
 					Write(x+2, yy, item.mk)
 				end
 			end
-			
+
 			SetNormal()
 		end
 		GotoXY(ScreenWidth-1, ScreenHeight-1)
-		
+
 		DrawStatusLine("^V rebinds a menu item; ^X unbinds it; ^R resets all bindings to default.")
 	end,
-	
+
 	drawmenustack = function(self)
 		local osb = DocumentSet.statusbar
 		DocumentSet.statusbar = true
 		RedrawScreen()
 		DocumentSet.statusbar = osb
-		
+
 		local o = 0
 		for _, m in ipairs(menu_stack) do
 			self:drawmenu(o*4, o*2, m.menu, m.n, m.top)
 			o = o + 1
 		end
 	end,
-	
+
 	runmenu = function(self, x, y, menu)
 		local n = 1
 		local top = 1
-		
+
 		while true do
 			local id
-			
+
 			while true do
 				local visiblelen = min(#menu, ScreenHeight-y-3)
 				if (n < top) then
@@ -353,7 +353,7 @@ MenuClass = {
 				end
 
 				self:drawmenu(x, y, menu, n, top)
-				
+
 				local c = GetChar():upper()
 				if (c == "KEY_RESIZE") then
 					ResizeScreen()
@@ -390,10 +390,10 @@ MenuClass = {
 					end
 				elseif (c == "KEY_^V") then
 					local item = menu[n]
-					if (type(item) ~= "string") and 
+					if (type(item) ~= "string") and
 							not self.accelerators[item.id] then
 						DrawStatusLine("Press new accelerator key for menu item.")
-						
+
 						local ak = GetChar():upper()
 						if ak:match("^KEY_") then
 							ak = ak:gsub("^KEY_", "")
@@ -424,17 +424,17 @@ MenuClass = {
 					break
 				end
 			end
-			
+
 			local item = menu_tab[id]
 			local f = item.fn
-			
+
 			if IsMenu(f) then
 				menu_stack[#menu_stack+1] = {
 					menu = menu,
 					n = n,
 					top = top
 				}
-				
+
 				local r = self:runmenu(x+4, y+2, f)
 				menu_stack[#menu_stack] = nil
 
@@ -443,7 +443,7 @@ MenuClass = {
 				elseif (r == false) then
 					return false
 				end
-				
+
 				self:drawmenustack()
 			else
 				if not f then
@@ -459,20 +459,20 @@ MenuClass = {
 			end
 		end
 	end,
-	
+
 	lookupAccelerator = function(self, c)
 		c = c:gsub("^KEY_", "")
 
 		-- Check the overrides table and only then the documentset keymap.
-		
+
 		local id = CheckOverrideTable(c) or self.accelerators[c]
 		if not id then
 			return nil
 		end
-		
+
 		-- Found something? Find out what function the menu ID corresponds to.
 		-- (Or maybe it's a raw function.)
-		
+
 		local f
 		if (type(id) == "function") then
 			f = id
@@ -497,7 +497,7 @@ function CreateMenu()
 		my_key_tab[ak] = id
 		my_key_tab[id] = ak
 	end
-	
+
 	local m = {
 		accelerators = my_key_tab
 	}
@@ -507,9 +507,9 @@ end
 
 function RebuildParagraphStylesMenu(styles)
 	submenu(ParagraphStylesMenu)
-	
+
 	local m = {}
-	
+
 	for id, style in ipairs(styles) do
 		local shortcut
 		if (id <= 10) then
@@ -517,7 +517,7 @@ function RebuildParagraphStylesMenu(styles)
 		else
 			shortcut = string.char(id + 54)
 		end
-		
+
 		m[#m+1] = {"SP"..id, shortcut, style.name..": "..style.desc, nil,
 			function()
 				Cmd.ChangeParagraphStyle(style.name)
@@ -529,7 +529,7 @@ end
 
 function RebuildDocumentsMenu(documents)
 	-- Remember any accelerator keys and unhook the old menu.
-	
+
 	local ak_tab = {}
 	for _, item in ipairs(DocumentsMenu) do
 		local ak = DocumentSet.menu.accelerators[item.id]
@@ -538,9 +538,9 @@ function RebuildDocumentsMenu(documents)
 		end
 	end
 	submenu(DocumentsMenu)
-	
+
 	-- Construct the new menu.
-	
+
 	local m = {}
 	for id, document in ipairs(documents) do
 		local ak = ak_tab[document.name]
@@ -550,15 +550,15 @@ function RebuildDocumentsMenu(documents)
 		else
 			shortcut = string.char(id + 54)
 		end
-		
+
 		m[#m+1] = {"D"..id, shortcut, document.name, ak,
 			function()
 				Cmd.ChangeDocument(document.name)
 			end}
 	end
-	
+
 	-- Hook it.
-	
+
 	addmenu("Documents", m, DocumentsMenu)
 end
 
@@ -578,4 +578,3 @@ function ListMenuItems()
 	io.stdout:write("All supported menu items:\n\n")
 	list(MainMenu)
 end
-
